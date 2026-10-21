@@ -51,7 +51,7 @@ ansible-playbook playbooks/stage1.yml --tags verify --vault-password-file .vault
 ### 3.2. На GPU-ВМ (SSH)
 
 ```bash
-ssh -i certs/ansible-gpu-211431-simonkonst.pem ansible@YOUR_VM_IP
+ssh -i certs/your-private-key.pem ansible@YOUR_VM_IP
 nvidia-smi
 docker ps
 curl -s http://127.0.0.1:11434/api/tags
@@ -122,7 +122,7 @@ curl -s "http://YOUR_VM_IP:8080/api/tags" -H "Authorization: Bearer ${TOKEN}"
 ### 3.5. SSH-туннель (без токена, только localhost Ollama)
 
 ```bash
-ssh -i certs/ansible-gpu-211431-simonkonst.pem -L 11434:127.0.0.1:11434 ansible@YOUR_VM_IP
+ssh -i certs/your-private-key.pem -L 11434:127.0.0.1:11434 ansible@YOUR_VM_IP
 ```
 
 В браузере: `http://127.0.0.1:11434/api/tags` (nginx и Bearer не используются).

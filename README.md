@@ -57,13 +57,13 @@ ansible-playbook playbooks/stage1.yml --tags proxy,base --vault-password-file .v
 gpu01:
   ansible_host: YOUR_VM_IP
   ansible_user: ansible
-  ansible_ssh_private_key_file: certs/ansible-gpu-211431-simonkonst.pem
+  ansible_ssh_private_key_file: certs/your-private-key.pem
 ```
 
 SSH с ключом immers:
 
 ```bash
-ssh -i certs/ansible-gpu-211431-simonkonst.pem -o IdentitiesOnly=yes ansible@YOUR_VM_IP
+ssh -i certs/your-private-key.pem -o IdentitiesOnly=yes ansible@YOUR_VM_IP
 ```
 
 Переменные: `inventory/group_vars/gpu_llm/vars.yml`  
@@ -134,7 +134,7 @@ curl -s "http://YOUR_VM_IP:8080/api/chat" \
 ### 4. SSH-туннель (без токена, только для отладки)
 
 ```bash
-ssh -i certs/ansible-gpu-211431-simonkonst.pem -L 11434:127.0.0.1:11434 ansible@YOUR_VM_IP
+ssh -i certs/your-private-key.pem -L 11434:127.0.0.1:11434 ansible@YOUR_VM_IP
 ```
 
 В браузере: `http://127.0.0.1:11434/api/tags` (nginx не используется).
@@ -179,6 +179,7 @@ curl -s http://127.0.0.1:11434/v1/chat/completions \
 - Не публикуйте **11434** в интернет.
 - Внешний доступ — только **8080** + токен (Vault).
 - Не коммитьте: `certs/*.pem`, `.vault_pass`, `inventory/hosts.yml`.
+- В README и примерах — только плейсхолдеры (`YOUR_VM_IP`, `your-private-key.pem`); реальные имена ключей и IP держите локально.
 
 ## Проверка без GPU
 

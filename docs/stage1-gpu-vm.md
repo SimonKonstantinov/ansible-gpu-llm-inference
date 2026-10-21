@@ -34,7 +34,7 @@ all:
         gpu01:
           ansible_host: YOUR_VM_IP
           ansible_user: ansible
-          ansible_ssh_private_key_file: certs/ansible-gpu-211431-simonkonst.pem
+          ansible_ssh_private_key_file: certs/your-private-key.pem
 ```
 
 ```bash
