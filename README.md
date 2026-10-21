@@ -6,7 +6,8 @@ Ansible разворачивает на Ubuntu + NVIDIA GPU: **драйверы*
 
 Целевая площадка: [immers.cloud](https://immers.cloud), PoC 7–8B, пресет **rtx4090-1.8.32.160**, Ubuntu 22.04.
 
-**Полный чеклист сдачи:** [docs/stage1-gpu-vm.md](docs/stage1-gpu-vm.md)
+**Полный чеклист сдачи:** [docs/stage1-gpu-vm.md](docs/stage1-gpu-vm.md)  
+**Что поднято и как проверить (DevHeader, curl):** [docs/verification.md](docs/verification.md)
 
 ## Соответствие ТЗ
 
@@ -17,7 +18,7 @@ Ansible разворачивает на Ubuntu + NVIDIA GPU: **драйверы*
 | Ollama / vLLM | роли `ollama` / `vllm`, `llm_runtime` в group_vars |
 | Автозапуск | `systemd` unit `ollama-compose.service` |
 | Проверка работоспособности | тег `verify` в `playbooks/site.yml`, `tests/verify.yml` |
-| README + пример API | ниже и [stage1-gpu-vm.md](docs/stage1-gpu-vm.md) |
+| README + пример API | [verification.md](docs/verification.md), [stage1-gpu-vm.md](docs/stage1-gpu-vm.md) |
 
 ## Архитектура
 
@@ -36,7 +37,7 @@ Control node — только ваш компьютер; отдельная ВМ
 pip install ansible ansible-lint yamllint
 ansible-galaxy collection install -r requirements.yml
 cp inventory/hosts.yml.example inventory/hosts.yml
-# IP ВМ, ключ: certs/ansible-gpu-211431-simonkonst.pem
+# IP ВМ; пользователь ansible — см. docs/bootstrap-ansible-user.md
 chmod 600 certs/*.pem
 ansible gpu_llm -m ping
 
@@ -56,7 +57,7 @@ gpu01:
   ansible_ssh_private_key_file: certs/ansible-gpu-211431-simonkonst.pem
 ```
 
-Переменные стека: `inventory/group_vars/gpu_llm.yml` (образец — `gpu_llm.yml.example`).
+Переменные: `inventory/group_vars/gpu_llm/vars.yml`, секреты — `inventory/group_vars/gpu_llm/vault.yml` ([vault-setup](docs/vault-setup.md)).
 
 ## Свой API (после Ansible)
 
@@ -81,7 +82,7 @@ curl -s http://127.0.0.1:11434/v1/chat/completions \
 ## vLLM
 
 ```yaml
-# inventory/group_vars/gpu_llm.yml
+# inventory/group_vars/gpu_llm/vars.yml
 llm_runtime: vllm
 ```
 
@@ -104,7 +105,7 @@ llm_runtime: vllm
 ## Безопасность
 
 - API слушает **127.0.0.1** — не открывайте 11434 в интернет без proxy.
-- Внешний доступ: `enable_reverse_proxy: true` + `reverse_proxy_api_token` (Ansible Vault — `vault.yml.example`).
+- Внешний доступ: `enable_reverse_proxy: true` + Ansible Vault ([docs/vault-setup.md](docs/vault-setup.md)).
 - SSH-ключи только в `certs/`, каталог в `.gitignore`.
 
 ## Опционально (не этап 1)

@@ -9,7 +9,8 @@ Control node — **ваш ПК** (`ansible-playbook` по SSH). Отдельны
 | # | Действие |
 |---|----------|
 | 1 | Создать ВМ: пресет **rtx4090-1.8.32.160**, Ubuntu **22.04** |
-| 2 | Положить SSH-ключ в `certs/` (не коммитить), настроить `inventory/hosts.yml` |
+| 2 | Создать пользователя `ansible` на ВМ — [bootstrap-ansible-user.md](bootstrap-ansible-user.md) |
+| 2b | Ключ в `certs/`, настроить `inventory/hosts.yml` |
 | 3 | `ansible-galaxy collection install -r requirements.yml` |
 | 4 | Проверка SSH: `ansible gpu_llm -m ping` |
 | 5 | `ansible-playbook playbooks/stage1.yml --tags base,nvidia,docker,ollama` |
@@ -20,7 +21,7 @@ Control node — **ваш ПК** (`ansible-playbook` по SSH). Отдельны
 
 Если после установки драйвера `nvidia-smi` не работает — **перезагрузите ВМ** и повторите шаги с тегом `nvidia`.
 
-Повторный прогон без `ollama pull`: в `inventory/group_vars/gpu_llm.yml` установите `ollama_pull_models: false`.
+Повторный прогон без `ollama pull`: в `inventory/group_vars/gpu_llm/vars.yml` установите `ollama_pull_models: false`.
 
 ## Inventory (пример)
 
@@ -65,7 +66,7 @@ curl -s "http://127.0.0.1:11434/v1/chat/completions" \
 
 ## vLLM (альтернатива Ollama)
 
-В `inventory/group_vars/gpu_llm.yml`: `llm_runtime: vllm`, затем полный прогон `playbooks/stage1.yml`.
+В `inventory/group_vars/gpu_llm/vars.yml`: `llm_runtime: vllm`, затем полный прогон `playbooks/stage1.yml`.
 
 Проверка: `curl -s http://127.0.0.1:8000/v1/models`
 
