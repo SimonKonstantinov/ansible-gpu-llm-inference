@@ -1,0 +1,47 @@
+---
+- name: Create Ollama compose directory
+  ansible.builtin.file:
+    path: "{{ ollama_compose_dir }}"
+    state: directory
+    mode: "0755"
+  tags: [ollama]
+
+- name: Deploy docker-compose.yml for Ollama
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ ollama_compose_dir }}/docker-compose.yml"
+    mode: "0644"
+  notify: Restart ollama compose
+  tags: [ollama]
+
+- name: Deploy systemd unit for Ollama
+  ansible.builtin.template:
+    src: ollama.service.j2
+    dest: /etc/systemd/system/ollama-compose.service
+    mode: "0644"
+  notify: Restart ollama compose
+  tags: [ollama]
+
+- name: Enable and start Ollama via systemd
+  ansible.builtin.systemd:
+    name: ollama-compose.service
+    enabled: true
+    state: started
+    daemon_reload: true
+  tags: [ollama]
+
+- name: Wait for Ollama API port
+  ansible.builtin.wait_for:
+    host: "{{ ollama_listen_host if ollama_listen_host != '0.0.0.0' else '127.0.0.1' }}"
+    port: "{{ ollama_listen_port }}"
+    timeout: 120
+  tags: [ollama]
+
+- name: Pull Ollama models
+  ansible.builtin.command:
+    cmd: docker exec ollama ollama pull {{ item }}
+  loop: "{{ ollama_models }}"
+  when: ollama_pull_models | bool
+  register: ollama_pull
+  changed_when: "'pulling' in ollama_pull.stdout or 'success' in ollama_pull.stdout"
+  tags: [models]

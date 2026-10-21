@@ -1,0 +1,4 @@
+---
+nvidia_skip_if_present: true
+nvidia_install_driver: true
+nvidia_driver_package: nvidia-driver-535

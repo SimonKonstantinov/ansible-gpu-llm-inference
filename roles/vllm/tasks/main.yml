@@ -1,0 +1,21 @@
+---
+- name: Create vLLM compose directory
+  ansible.builtin.file:
+    path: "{{ vllm_compose_dir }}"
+    state: directory
+    mode: "0755"
+  tags: [vllm]
+
+- name: Deploy docker-compose for vLLM
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ vllm_compose_dir }}/docker-compose.yml"
+    mode: "0644"
+  tags: [vllm]
+
+- name: Start vLLM stack
+  ansible.builtin.command:
+    cmd: docker compose up -d
+    chdir: "{{ vllm_compose_dir }}"
+  changed_when: true
+  tags: [vllm]

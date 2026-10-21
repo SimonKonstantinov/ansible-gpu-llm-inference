@@ -1,0 +1,4 @@
+---
+docker_users: []
+nvidia_container_toolkit_version: "1.17.4-1"
+docker_compose_plugin: true

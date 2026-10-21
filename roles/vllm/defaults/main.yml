@@ -1,0 +1,5 @@
+---
+vllm_model: Qwen/Qwen2.5-7B-Instruct
+vllm_compose_dir: /opt/vllm
+vllm_port: 8000
+vllm_image: vllm/vllm-openai:latest

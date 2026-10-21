@@ -1,0 +1,8 @@
+---
+ollama_image: ollama/ollama:latest
+ollama_listen_host: "127.0.0.1"
+ollama_listen_port: 11434
+ollama_models:
+  - qwen2.5:7b
+ollama_pull_models: true
+ollama_compose_dir: /opt/ollama

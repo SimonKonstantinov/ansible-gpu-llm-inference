@@ -1,0 +1,65 @@
+---
+- name: Install Docker CE dependencies
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-compose-v2
+    state: present
+    update_cache: true
+  tags: [docker]
+
+- name: Ensure Docker service running
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+  tags: [docker]
+
+- name: Add users to docker group
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: docker
+    append: true
+  loop: "{{ docker_users }}"
+  tags: [docker]
+
+- name: Add NVIDIA container toolkit repository key
+  ansible.builtin.get_url:
+    url: https://nvidia.github.io/libnvidia-container/gpgkey
+    dest: /usr/share/keyrings/nvidia-container-toolkit-keyring.asc
+    mode: "0644"
+  tags: [docker]
+
+- name: Add NVIDIA container toolkit apt repo
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.asc] https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /"
+    filename: nvidia-container-toolkit
+    state: present
+  tags: [docker]
+
+- name: Install NVIDIA Container Toolkit
+  ansible.builtin.apt:
+    name: nvidia-container-toolkit
+    state: present
+    update_cache: true
+  tags: [docker]
+
+- name: Configure NVIDIA runtime for Docker
+  ansible.builtin.command: nvidia-ctk runtime configure --runtime=docker
+  register: nvidia_ctk
+  changed_when: nvidia_ctk.rc == 0
+  tags: [docker]
+
+- name: Restart Docker after NVIDIA runtime config
+  ansible.builtin.service:
+    name: docker
+    state: restarted
+  when: nvidia_ctk is changed
+  tags: [docker]
+
+- name: GPU smoke test in Docker
+  ansible.builtin.command:
+    cmd: docker run --rm --gpus all nvidia/cuda:12.2.0-base-ubuntu22.04 nvidia-smi
+  register: docker_gpu_smoke
+  changed_when: false
+  tags: [docker]

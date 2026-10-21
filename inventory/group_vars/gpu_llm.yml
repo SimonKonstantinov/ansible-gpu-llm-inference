@@ -1,0 +1,32 @@
+---
+llm_runtime: ollama
+
+nvidia_skip_if_present: true
+nvidia_install_driver: true
+nvidia_driver_package: nvidia-driver-535
+
+docker_users: []
+nvidia_container_toolkit_version: "1.17.4-1"
+
+ollama_image: ollama/ollama:latest
+ollama_listen_host: "127.0.0.1"
+ollama_listen_port: 11434
+ollama_models:
+  - qwen2.5:7b
+ollama_pull_models: true
+ollama_compose_dir: /opt/ollama
+
+vllm_model: Qwen/Qwen2.5-7B-Instruct
+vllm_compose_dir: /opt/vllm
+vllm_port: 8000
+
+enable_reverse_proxy: false
+enable_monitoring: false
+
+reverse_proxy_listen_port: 8080
+reverse_proxy_api_token: "CHANGE_ME_USE_ANSIBLE_VAULT"
+
+ufw_allow_ssh_from: "0.0.0.0/0"
+admin_ip_for_ufw: ""
+
+use_immers_marketplace_image: false

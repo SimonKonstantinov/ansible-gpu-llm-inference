@@ -1,0 +1,24 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ansible-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          pip install ansible ansible-lint yamllint
+          ansible-galaxy collection install -r requirements.yml
+      - name: yamllint
+        run: yamllint -d relaxed .
+      - name: ansible-lint
+        run: ansible-lint playbooks/site.yml
+      - name: syntax-check
+        run: |
+          cp inventory/hosts.yml.example inventory/hosts.yml
+          ansible-playbook playbooks/site.yml --syntax-check

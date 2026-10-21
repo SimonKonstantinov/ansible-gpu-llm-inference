@@ -1,0 +1,55 @@
+---
+- name: GPU LLM inference stack
+  hosts: gpu_llm
+  gather_facts: true
+  roles:
+    - role: common
+      tags: [base]
+    - role: nvidia
+      tags: [nvidia]
+    - role: docker
+      tags: [docker]
+    - role: ollama
+      when: llm_runtime == 'ollama'
+      tags: [ollama]
+    - role: vllm
+      when: llm_runtime == 'vllm'
+      tags: [vllm]
+    - role: reverse_proxy
+      when: enable_reverse_proxy | bool
+      tags: [proxy]
+    - role: monitoring
+      when: enable_monitoring | bool
+      tags: [monitoring]
+  tasks:
+    - name: Verify Ollama API responds
+      ansible.builtin.uri:
+        url: "http://{{ ollama_listen_host }}:{{ ollama_listen_port }}/api/tags"
+        method: GET
+        status_code: 200
+      register: ollama_tags
+      retries: 12
+      delay: 10
+      until: ollama_tags is succeeded
+      when: llm_runtime == 'ollama'
+      tags: [verify]
+
+    - name: Verify vLLM OpenAI models endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ vllm_port }}/v1/models"
+        method: GET
+        status_code: 200
+      register: vllm_models
+      retries: 24
+      delay: 15
+      until: vllm_models is succeeded
+      when: llm_runtime == 'vllm'
+      tags: [verify]
+
+    - name: Health check summary
+      ansible.builtin.debug:
+        msg: >-
+          Stack ready. Runtime={{ llm_runtime }}.
+          Ollama: http://{{ ollama_listen_host }}:{{ ollama_listen_port }}
+      when: llm_runtime == 'ollama'
+      tags: [verify]

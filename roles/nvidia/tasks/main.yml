@@ -1,0 +1,41 @@
+---
+- name: Check if nvidia-smi works
+  ansible.builtin.command: nvidia-smi
+  register: nvidia_smi_check
+  changed_when: false
+  failed_when: false
+  tags: [nvidia]
+
+- name: Skip driver install when GPU already visible
+  ansible.builtin.debug:
+    msg: "nvidia-smi OK — пропускаем установку драйвера (nvidia_skip_if_present=true)"
+  when:
+    - nvidia_skip_if_present | bool
+    - nvidia_smi_check.rc == 0
+  tags: [nvidia]
+
+- name: Install NVIDIA driver package
+  ansible.builtin.apt:
+    name: "{{ nvidia_driver_package }}"
+    state: present
+    update_cache: true
+  when:
+    - nvidia_install_driver | bool
+    - not (nvidia_skip_if_present | bool and nvidia_smi_check.rc == 0)
+  tags: [nvidia]
+
+- name: Require reboot after driver install
+  ansible.builtin.debug:
+    msg: "Драйвер установлен. Перезагрузите ВМ и запустите playbook снова с тегами nvidia,docker,..."
+  when:
+    - nvidia_install_driver | bool
+    - not (nvidia_skip_if_present | bool and nvidia_smi_check.rc == 0)
+  tags: [nvidia]
+
+- name: Assert nvidia-smi succeeds
+  ansible.builtin.command: nvidia-smi -L
+  register: nvidia_list
+  changed_when: false
+  failed_when: nvidia_list.rc != 0
+  when: nvidia_smi_check.rc == 0
+  tags: [nvidia]

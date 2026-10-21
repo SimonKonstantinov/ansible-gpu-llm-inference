@@ -1,0 +1,3 @@
+---
+monitoring_compose_dir: /opt/monitoring
+node_exporter_port: 9100

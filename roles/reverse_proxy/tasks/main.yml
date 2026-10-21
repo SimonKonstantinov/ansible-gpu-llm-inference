@@ -1,0 +1,37 @@
+---
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+  tags: [proxy]
+
+- name: Deploy nginx site for Ollama API
+  ansible.builtin.template:
+    src: ollama-api.conf.j2
+    dest: /etc/nginx/sites-available/ollama-api.conf
+    mode: "0644"
+  notify: Reload nginx
+  tags: [proxy]
+
+- name: Enable Ollama nginx site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/ollama-api.conf
+    dest: /etc/nginx/sites-enabled/ollama-api.conf
+    state: link
+  notify: Reload nginx
+  tags: [proxy]
+
+- name: Disable default nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+  tags: [proxy]
+
+- name: Ensure nginx is running
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+  tags: [proxy]

@@ -1,0 +1,13 @@
+services:
+  ollama:
+    image: {{ ollama_image }}
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "{{ ollama_listen_host }}:{{ ollama_listen_port }}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    gpus: all
+
+volumes:
+  ollama_data:

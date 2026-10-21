@@ -1,0 +1,8 @@
+inventory/hosts.yml
+*.vault
+.env
+.env.*
+.vault_pass
+__pycache__/
+.ansible/
+*.retry
