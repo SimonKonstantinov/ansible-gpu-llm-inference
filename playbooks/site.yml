@@ -46,6 +46,20 @@
       when: llm_runtime == 'vllm'
       tags: [verify]
 
+    - name: Assert Ollama models from config are listed
+      ansible.builtin.assert:
+        that:
+          - (ollama_models | difference(ollama_model_names)) | length == 0
+        fail_msg: >-
+          Модели {{ ollama_models }} не найдены в /api/tags: {{ ollama_model_names }}
+      vars:
+        ollama_model_names: "{{ ollama_tags.json.models | map(attribute='name') | list }}"
+      when:
+        - llm_runtime == 'ollama'
+        - ollama_pull_models | default(true) | bool
+        - ollama_tags is succeeded
+      tags: [verify]
+
     - name: Health check summary
       ansible.builtin.debug:
         msg: >-

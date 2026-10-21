@@ -1,0 +1,7 @@
+---
+# Создайте зашифрованный vault.yml:
+#   ansible-vault create inventory/group_vars/vault.yml
+# Подключение в group_vars/gpu_llm.yml:
+#   reverse_proxy_api_token: "{{ vault_reverse_proxy_api_token }}"
+
+vault_reverse_proxy_api_token: "REPLACE_WITH_STRONG_TOKEN"

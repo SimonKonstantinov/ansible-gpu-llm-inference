@@ -1,0 +1,50 @@
+---
+# Запуск на уже настроенном хосте: ansible-playbook tests/verify.yml
+- name: Post-deploy verification (GPU LLM)
+  hosts: gpu_llm
+  gather_facts: false
+  tasks:
+    - name: Check nvidia-smi
+      ansible.builtin.command: nvidia-smi
+      register: nvidia_smi
+      changed_when: false
+      tags: [verify]
+
+    - name: Check Ollama /api/tags
+      ansible.builtin.uri:
+        url: "http://{{ ollama_listen_host }}:{{ ollama_listen_port }}/api/tags"
+        method: GET
+        status_code: 200
+      register: ollama_tags
+      when: llm_runtime == 'ollama'
+      tags: [verify]
+
+    - name: Assert Ollama models from config are loaded
+      ansible.builtin.assert:
+        that:
+          - (ollama_models | difference(ollama_model_names | default([]))) | length == 0
+        fail_msg: >-
+          Ожидались модели {{ ollama_models }}, в API: {{ ollama_model_names | default([]) }}
+      vars:
+        ollama_model_names: "{{ ollama_tags.json.models | map(attribute='name') | list }}"
+      when:
+        - llm_runtime == 'ollama'
+        - ollama_pull_models | default(true) | bool
+      tags: [verify]
+
+    - name: Ollama chat smoke test
+      ansible.builtin.uri:
+        url: "http://{{ ollama_listen_host }}:{{ ollama_listen_port }}/api/chat"
+        method: POST
+        body_format: json
+        body:
+          model: "{{ ollama_models[0] }}"
+          messages:
+            - role: user
+              content: "Ответь одним словом: ок"
+          stream: false
+        status_code: 200
+      when:
+        - llm_runtime == 'ollama'
+        - ollama_models | length > 0
+      tags: [verify]

@@ -134,6 +134,23 @@ llm_runtime: vllm
 - Для внешнего доступа: `enable_reverse_proxy: true` и задайте `reverse_proxy_api_token` (лучше через Ansible Vault).
 - Ограничьте SSH в `ufw_allow_ssh_from` своим IP.
 
+### Ansible Vault (токен proxy)
+
+```bash
+ansible-vault create inventory/group_vars/vault.yml
+# добавьте vault_reverse_proxy_api_token (см. vault.yml.example)
+```
+
+В `inventory/group_vars/gpu_llm.yml`:
+
+```yaml
+reverse_proxy_api_token: "{{ vault_reverse_proxy_api_token }}"
+```
+
+Запуск с vault: `ansible-playbook playbooks/site.yml --ask-vault-pass`
+
+Не коммитьте ключи SSH в репозиторий (`certs/`, `*.pem` в `.gitignore`).
+
 ## Мониторинг GPU (улучшение)
 
 - `enable_monitoring: true` — поднимает `node_exporter` на localhost.
@@ -146,6 +163,8 @@ yamllint .
 ansible-lint playbooks/site.yml
 ansible-playbook playbooks/site.yml --syntax-check
 ```
+
+После деплоя на GPU-ВМ: `ansible-playbook tests/verify.yml --tags verify`
 
 ## Структура
 

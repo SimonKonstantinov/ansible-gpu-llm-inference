@@ -1,4 +1,8 @@
 inventory/hosts.yml
+certs/
+*.pem
+*.ppk
+*.key
 *.vault
 .env
 .env.*

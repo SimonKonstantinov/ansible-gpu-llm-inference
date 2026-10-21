@@ -1,0 +1,9 @@
+---
+skip_list:
+  - yaml[line-length]
+  - name[casing]
+  - no-changed-when
+  - command-instead-of-module
+
+warn_list:
+  - experimental

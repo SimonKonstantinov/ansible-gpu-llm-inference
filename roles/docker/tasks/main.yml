@@ -30,9 +30,16 @@
     mode: "0644"
   tags: [docker]
 
+- name: Map architecture for NVIDIA container toolkit repo
+  ansible.builtin.set_fact:
+    nvidia_container_repo_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
+  tags: [docker]
+
 - name: Add NVIDIA container toolkit apt repo
   ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.asc] https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /"
+    repo: >-
+      deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.asc]
+      https://nvidia.github.io/libnvidia-container/stable/deb/{{ nvidia_container_repo_arch }} /
     filename: nvidia-container-toolkit
     state: present
   tags: [docker]
