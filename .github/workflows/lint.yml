@@ -22,4 +22,5 @@ jobs:
         run: |
           cp inventory/hosts.yml.example inventory/hosts.yml
           ansible-playbook playbooks/site.yml --syntax-check
+          ansible-playbook playbooks/stage1.yml --syntax-check
           ansible-playbook tests/verify.yml --syntax-check

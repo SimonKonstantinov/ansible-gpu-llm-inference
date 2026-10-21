@@ -67,3 +67,20 @@
           Ollama: http://{{ ollama_listen_host }}:{{ ollama_listen_port }}
       when: llm_runtime == 'ollama'
       tags: [verify]
+
+    - name: Example curl commands for submission
+      ansible.builtin.debug:
+        msg:
+          - "curl -s http://{{ ollama_listen_host }}:{{ ollama_listen_port }}/api/tags"
+          - >-
+            curl -s http://{{ ollama_listen_host }}:{{ ollama_listen_port }}/api/chat
+            -H 'Content-Type: application/json'
+            -d '{"model":"{{ ollama_models[0] }}","messages":[{"role":"user","content":"Привет"}],"stream":false}'
+          - >-
+            curl -s http://{{ ollama_listen_host }}:{{ ollama_listen_port }}/v1/chat/completions
+            -H 'Content-Type: application/json'
+            -d '{"model":"{{ ollama_models[0] }}","messages":[{"role":"user","content":"test"}]}'
+      when:
+        - llm_runtime == 'ollama'
+        - ollama_models | length > 0
+      tags: [verify]

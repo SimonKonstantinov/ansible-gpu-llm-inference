@@ -1,93 +1,71 @@
 # ansible-gpu-llm-inference
 
-Ansible-плейбук для Ubuntu + NVIDIA GPU: драйверы, Docker, NVIDIA Container Toolkit, **Ollama** (или **vLLM**) с API, автозапуском и проверкой работоспособности.
+## Этап 1 — self-hosted LLM API на GPU-ВМ
 
-Подготовлено для PoC на [immers.cloud](https://immers.cloud) (почасовая/поминутная аренда GPU).
+Ansible разворачивает на Ubuntu + NVIDIA GPU: **драйверы**, **Docker** (GPU в контейнерах), **Ollama** или **vLLM**, **systemd**-автозапуск и **healthcheck**. После прогона — **свой API** на `http://127.0.0.1:11434` (Ollama).
 
-## Что делает playbook
+Целевая площадка: [immers.cloud](https://immers.cloud), PoC 7–8B, пресет **rtx4090-1.8.32.160**, Ubuntu 22.04.
 
-| Компонент | Роль |
-|-----------|------|
-| Базовая ОС, UFW | `common` |
-| NVIDIA driver / `nvidia-smi` | `nvidia` |
-| Docker + GPU в контейнерах | `docker` |
-| Ollama (по умолчанию) | `ollama` |
-| vLLM (опционально) | `vllm` |
-| Nginx + Bearer token | `reverse_proxy` |
-| node_exporter (заготовка) | `monitoring` |
+**Полный чеклист сдачи:** [docs/stage1-gpu-vm.md](docs/stage1-gpu-vm.md)
 
-## Рекомендуемая конфигурация immers (7–8B)
+## Соответствие ТЗ
 
-- **GPU:** 1× RTX 4090 24 GB  
-- **Пресет:** `rtx4090-1.8.32.160` (~[каталог 4090](https://en.immers.cloud/gpu/4090/))  
-- **ОС:** Ubuntu 22.04 LTS  
+| Требование | Где в репозитории |
+|------------|-------------------|
+| Драйверы NVIDIA | роль `nvidia`, `nvidia-smi` |
+| Docker + окружение GPU | роль `docker`, nvidia-container-toolkit |
+| Ollama / vLLM | роли `ollama` / `vllm`, `llm_runtime` в group_vars |
+| Автозапуск | `systemd` unit `ollama-compose.service` |
+| Проверка работоспособности | тег `verify` в `playbooks/site.yml`, `tests/verify.yml` |
+| README + пример API | ниже и [stage1-gpu-vm.md](docs/stage1-gpu-vm.md) |
 
-Подробный бюджетный чеклист: [docs/budget-run.md](docs/budget-run.md).
-
-## Этап 0: попробовать модель без своей GPU
-
-Каталог [Immers Foundation Models — «можно попробовать»](https://immers.cloud/ai/model/?sort=-ICanTry): публичный API для теста клиента без аренды ВМ.  
-Пример запроса: [docs/immers-public-api.md](docs/immers-public-api.md).
-
-## Где запускать Ansible
-
-**Control node — ваш ПК** (Linux / macOS / WSL). Отдельный сервер под Ansible не нужен.
+## Архитектура
 
 ```text
-[ноутбук] --SSH--> [GPU-ВМ immers]
-     ansible-playbook
+[ваш ПК]  --SSH (user: ansible)-->  [GPU-ВМ immers]
+                                         ├── nvidia-smi
+                                         ├── docker + GPU
+                                         └── Ollama :11434 (localhost)
 ```
 
-## Быстрый старт
+Control node — только ваш компьютер; отдельная ВМ под Ansible не нужна.
 
-### 1. Зависимости на ПК
+## Быстрый старт
 
 ```bash
 pip install ansible ansible-lint yamllint
 ansible-galaxy collection install -r requirements.yml
-```
-
-### 2. Inventory
-
-```bash
 cp inventory/hosts.yml.example inventory/hosts.yml
-# укажите ansible_host, ansible_user, ключ SSH
+# IP ВМ, ключ: certs/ansible-gpu-211431-simonkonst.pem
+chmod 600 certs/*.pem
+ansible gpu_llm -m ping
+
+ansible-playbook playbooks/stage1.yml --tags base,nvidia,docker,ollama
+ansible-playbook playbooks/stage1.yml --tags models
+ansible-playbook playbooks/stage1.yml --tags verify
 ```
 
-Переменные: `inventory/group_vars/gpu_llm.yml` (образец — `gpu_llm.yml.example`).
+Полный прогон: `ansible-playbook playbooks/stage1.yml`
 
-### 3. Запуск (бюджетно, по тегам)
+## Inventory (пример)
 
-```bash
-ansible-playbook playbooks/site.yml --tags base,nvidia,docker,ollama
-ansible-playbook playbooks/site.yml --tags models
-ansible-playbook playbooks/site.yml --tags verify
+```yaml
+gpu01:
+  ansible_host: YOUR_VM_IP
+  ansible_user: ansible
+  ansible_ssh_private_key_file: certs/ansible-gpu-211431-simonkonst.pem
 ```
 
-Полный прогон:
+Переменные стека: `inventory/group_vars/gpu_llm.yml` (образец — `gpu_llm.yml.example`).
 
-```bash
-ansible-playbook playbooks/site.yml
-```
+## Свой API (после Ansible)
 
-### 4. Проверка на сервере
-
-```bash
-nvidia-smi
-docker ps
-curl -s http://127.0.0.1:11434/api/tags
-```
-
-**Chat API (Ollama):**
+**Chat API:**
 
 ```bash
 curl -s http://127.0.0.1:11434/api/chat \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "qwen2.5:7b",
-    "messages": [{"role": "user", "content": "Привет"}],
-    "stream": false
-  }'
+  -d '{"model":"qwen2.5:7b","messages":[{"role":"user","content":"Привет"}],"stream":false}'
 ```
 
 **OpenAI-compatible:**
@@ -95,86 +73,60 @@ curl -s http://127.0.0.1:11434/api/chat \
 ```bash
 curl -s http://127.0.0.1:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "qwen2.5:7b",
-    "messages": [{"role": "user", "content": "test"}]
-  }'
+  -d '{"model":"qwen2.5:7b","messages":[{"role":"user","content":"test"}]}'
 ```
 
-**Python:**
+Модель по умолчанию задаётся в `ollama_models` (сейчас `qwen2.5:7b`).
 
-```python
-import requests
-
-r = requests.post(
-    "http://127.0.0.1:11434/api/chat",
-    json={
-        "model": "qwen2.5:7b",
-        "messages": [{"role": "user", "content": "Привет"}],
-        "stream": False,
-    },
-    timeout=120,
-)
-print(r.json()["message"]["content"])
-```
-
-## Переключение на vLLM
-
-В `inventory/group_vars/gpu_llm.yml`:
+## vLLM
 
 ```yaml
+# inventory/group_vars/gpu_llm.yml
 llm_runtime: vllm
 ```
 
 Проверка: `curl -s http://127.0.0.1:8000/v1/models`
 
-## Безопасность API
+## Роли playbook
 
-- По умолчанию Ollama слушает **127.0.0.1:11434** (не светит порт в интернет).
-- Для внешнего доступа: `enable_reverse_proxy: true` и задайте `reverse_proxy_api_token` (лучше через Ansible Vault).
-- Ограничьте SSH в `ufw_allow_ssh_from` своим IP.
+| Компонент | Роль |
+|-----------|------|
+| ОС, UFW | `common` |
+| NVIDIA | `nvidia` |
+| Docker + GPU | `docker` |
+| Ollama | `ollama` |
+| vLLM | `vllm` |
+| Nginx + Bearer (опционально) | `reverse_proxy` |
+| node_exporter (опционально) | `monitoring` |
 
-### Ansible Vault (токен proxy)
+На этапе 1: `enable_reverse_proxy: false`, `enable_monitoring: false`.
 
-```bash
-ansible-vault create inventory/group_vars/vault.yml
-# добавьте vault_reverse_proxy_api_token (см. vault.yml.example)
-```
+## Безопасность
 
-В `inventory/group_vars/gpu_llm.yml`:
+- API слушает **127.0.0.1** — не открывайте 11434 в интернет без proxy.
+- Внешний доступ: `enable_reverse_proxy: true` + `reverse_proxy_api_token` (Ansible Vault — `vault.yml.example`).
+- SSH-ключи только в `certs/`, каталог в `.gitignore`.
 
-```yaml
-reverse_proxy_api_token: "{{ vault_reverse_proxy_api_token }}"
-```
+## Опционально (не этап 1)
 
-Запуск с vault: `ansible-playbook playbooks/site.yml --ask-vault-pass`
-
-Не коммитьте ключи SSH в репозиторий (`certs/`, `*.pem` в `.gitignore`).
-
-## Мониторинг GPU (улучшение)
-
-- `enable_monitoring: true` — поднимает `node_exporter` на localhost.
-- Для GPU-метрик добавьте DCGM exporter или Prometheus + Grafana (см. комментарий в роли `monitoring`).
+Публичные модели immers без своей ВМ: [docs/optional-immers-catalog.md](docs/optional-immers-catalog.md)
 
 ## Проверка без GPU
 
 ```bash
-yamllint .
-ansible-lint playbooks/site.yml
-ansible-playbook playbooks/site.yml --syntax-check
+ansible-playbook playbooks/stage1.yml --syntax-check
+ansible-playbook tests/verify.yml --syntax-check
 ```
-
-После деплоя на GPU-ВМ: `ansible-playbook tests/verify.yml --tags verify`
 
 ## Структура
 
 ```text
-playbooks/site.yml    # главный playbook
-roles/                # common, nvidia, docker, ollama, vllm, reverse_proxy, monitoring
-inventory/            # hosts + group_vars
-docs/                 # бюджетный прогон, immers public API
+playbooks/stage1.yml   # точка входа для сдачи
+playbooks/site.yml     # основной playbook
+docs/stage1-gpu-vm.md  # чеклист этапа 1
+roles/                 # common, nvidia, docker, ollama, ...
 ```
 
 ## Лицензия
 
-MIT (при необходимости укажите свою).
+MIT

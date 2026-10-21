@@ -1,0 +1,4 @@
+---
+# Этап 1: развёртывание self-hosted LLM API на GPU-ВМ (immers).
+# См. docs/stage1-gpu-vm.md
+- import_playbook: site.yml
