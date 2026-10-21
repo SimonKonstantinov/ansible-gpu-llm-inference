@@ -75,3 +75,5 @@ curl -s "http://127.0.0.1:11434/v1/chat/completions" \
 По умолчанию API только на **127.0.0.1**. Для выхода в интернет: `enable_reverse_proxy: true` и токен (см. README).
 
 Ориентир стоимости одного прогона: **~$1–2** при ~$0.93–1.0/ч и 1–2 ч работы ВМ.
+
+Отчёт о проверке (DevHeader, curl, скриншоты): [verification.md](verification.md).
