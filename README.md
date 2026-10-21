@@ -108,9 +108,7 @@ llm_runtime: vllm
 - Внешний доступ: `enable_reverse_proxy: true` + Ansible Vault ([docs/vault-setup.md](docs/vault-setup.md)).
 - SSH-ключи только в `certs/`, каталог в `.gitignore`.
 
-## Опционально (не этап 1)
 
-Публичные модели immers без своей ВМ: [docs/optional-immers-catalog.md](docs/optional-immers-catalog.md)
 
 ## Проверка без GPU
 
