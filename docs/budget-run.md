@@ -33,6 +33,9 @@ ansible-playbook playbooks/site.yml --tags verify
 ## Этап 3 — проверка API
 
 ```bash
+ansible-playbook playbooks/site.yml --tags verify
+# или отдельный play:
+ansible-playbook tests/verify.yml --tags verify
 ssh ubuntu@<IP> 'curl -s http://127.0.0.1:11434/api/tags'
 ```
 
