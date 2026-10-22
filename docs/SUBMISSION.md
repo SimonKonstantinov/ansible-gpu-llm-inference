@@ -1,3 +1,4 @@
+
 # Отчёт по тестовому заданию: GPU LLM + Ansible
 
 Автоматизированное развёртывание на GPU-ВМ (Ubuntu, NVIDIA): **Ollama** с моделью **qwen2.5:7b**, защищённый **API**, **Open WebUI**, мониторинг **Prometheus/Grafana**.
