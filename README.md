@@ -3,7 +3,16 @@
 Ansible-плейбук разворачивает на **GPU-ВМ** (Ubuntu + NVIDIA) стек: **Ollama** с моделью **qwen2.5:7b**, защищённый **API**, **Open WebUI** и **мониторинг** (Prometheus + Grafana).
 
 **Полный отчёт и чеклист для проверяющего:** [docs/SUBMISSION.md](docs/SUBMISSION.md)  
-**Скриншоты к отчёту:** [docs/screenshots/](docs/screenshots/)
+**Скриншоты к отчёту:** [docs/screenshots/](docs/screenshots/) (в отчёте [SUBMISSION.md](docs/SUBMISSION.md) — галерея после push на `main`).
+
+<details>
+<summary>Превью скриншотов (локально из репозитория)</summary>
+
+| Verify | API tags |
+|--------|----------|
+| ![01](docs/screenshots/01-verify-recap.png) | ![03](docs/screenshots/03-api-tags.png) |
+
+</details>
 
 ---
 

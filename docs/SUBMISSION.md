@@ -1,5 +1,6 @@
-
 # Отчёт по тестовому заданию: GPU LLM + Ansible
+
+Скриншоты: папка [`screenshots/`](screenshots/). Встроенные ниже картинки подгружаются с GitHub (`raw.githubusercontent.com`); после `git push` обновите страницу отчёта.
 
 Автоматизированное развёртывание на GPU-ВМ (Ubuntu, NVIDIA): **Ollama** с моделью **qwen2.5:7b**, защищённый **API**, **Open WebUI**, мониторинг **Prometheus/Grafana**.
 
@@ -28,15 +29,15 @@
 
 | Требование | Реализация | Как проверить | Скрин |
 |------------|------------|---------------|-------|
-| Ubuntu + NVIDIA | роль `nvidia` | `nvidia-smi` | [02-nvidia-smi.png](screenshots/02-nvidia-smi.png) |
+| Ubuntu + NVIDIA | роль `nvidia` | `nvidia-smi` | [02](screenshots/02-nvidia-smi.png) |
 | Docker + окружение | роль `docker` | `docker ps`, GPU в контейнере | — |
-| Ollama / аналог LLM | роль `ollama` | `/api/tags`, модель в JSON | [03-api-tags.png](screenshots/03-api-tags.png) |
+| Ollama / аналог LLM | роль `ollama` | `/api/tags`, модель в JSON | [03](screenshots/03-api-tags.png) |
 | Автозапуск | `ollama-compose.service` | `systemctl is-enabled ollama-compose` | — |
-| Проверка работоспособности | тег `verify` | PLAY RECAP `failed=0` | [01-verify-recap.png](screenshots/01-verify-recap.png) |
-| README + пример API | README, этот отчёт | curl / DevHeader на :8080 | [03-api-tags.png](screenshots/03-api-tags.png) |
+| Проверка работоспособности | тег `verify` | PLAY RECAP `failed=0` | [01](screenshots/01-verify-recap.png) |
+| README + пример API | README, этот отчёт | curl / DevHeader на :8080 | [03](screenshots/03-api-tags.png) |
 | Защита API (доп.) | nginx :8080 + Bearer | без токена → 401 | — |
-| Мониторинг GPU/сервера (доп.) | Grafana, DCGM, exporters | дашборды GPU / Infrastructure / LLM | [04-grafana-gpu.png](screenshots/04-grafana-gpu.png), [05-grafana-ollama.png](screenshots/05-grafana-ollama.png) |
-| Графический интерфейс (доп.) | Open WebUI :8082 | чат с моделью | [06-open-webui-chat.png](screenshots/06-open-webui-chat.png) |
+| Мониторинг GPU/сервера (доп.) | Grafana, DCGM, exporters | дашборды GPU / Infrastructure / LLM | [04](screenshots/04-grafana-gpu.png), [05](screenshots/05-grafana-ollama.png) |
+| Графический интерфейс (доп.) | Open WebUI :8082 | чат с моделью | [06](screenshots/06-open-webui-chat.png) |
 
 ---
 
@@ -105,7 +106,7 @@ ansible-playbook playbooks/stage1.yml --tags verify --vault-password-file .vault
 
 **Ожидание:** в PLAY RECAP `failed=0`.
 
-![Verify](screenshots/01-verify-recap.png)
+![Verify recap — ansible verify failed=0](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/01-verify-recap.png)
 
 ### 2. NVIDIA и Docker (SSH на ВМ)
 
@@ -116,7 +117,7 @@ docker ps
 
 **Ожидание:** видна GPU; контейнеры `ollama`, мониторинг, `open-webui` в состоянии Up.
 
-![nvidia-smi](screenshots/02-nvidia-smi.png)
+![nvidia-smi на GPU-ВМ](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/02-nvidia-smi.png)
 
 ### 3. API Ollama снаружи
 
@@ -138,7 +139,7 @@ curl -s "http://YOUR_VM_IP:8080/api/chat" \
   -d '{"model":"qwen2.5:7b","messages":[{"role":"user","content":"Привет"}],"stream":false}'
 ```
 
-![API tags](screenshots/03-api-tags.png)
+![API tags qwen2.5:7b на порту 8080](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/03-api-tags.png)
 
 ### 4. Автозапуск
 
@@ -163,11 +164,11 @@ systemctl is-enabled ollama-compose
 
 Справочник: [monitoring.md](monitoring.md).
 
-![Grafana GPU](screenshots/04-grafana-gpu.png)
+![Grafana GPU DCGM](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/04-grafana-gpu.png)
 
-![Grafana Ollama](screenshots/05-grafana-ollama.png)
+![Grafana Ollama LLM Inference](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/05-grafana-ollama.png)
 
-![Grafana nginx](screenshots/07-grafana-nginx.png)
+![Grafana nginx](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/07-grafana-nginx.png)
 
 ### 6. Open WebUI (доп.)
 
@@ -177,7 +178,7 @@ systemctl is-enabled ollama-compose
 
 См. [open-webui.md](open-webui.md).
 
-![Open WebUI](screenshots/06-open-webui-chat.png)
+![Open WebUI чат qwen2.5:7b](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/06-open-webui-chat.png)
 
 ### 7. Безопасность API (доп.)
 
