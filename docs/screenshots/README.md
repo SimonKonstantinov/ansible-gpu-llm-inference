@@ -5,6 +5,8 @@
 
 **Не публикуйте** токены Bearer, пароли Grafana/nginx и содержимое `vault.yml` — замажьте на скринах.
 
+Имена файлов — **ровно** как в таблице (одно расширение `.png`). Если сохраняете как `02-nvidia-smi.png`, не добавляйте второй `.png` — получится `02-nvidia-smi.png.png`, и картинки в [SUBMISSION.md](../SUBMISSION.md) не найдутся.
+
 | Файл | Что снять |
 |------|-----------|
 | [01-verify-recap.png](01-verify-recap.png) | Терминал: `ansible-playbook ... --tags verify`, PLAY RECAP `failed=0` |
