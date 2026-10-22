@@ -1,6 +1,6 @@
 # Отчёт по тестовому заданию: GPU LLM + Ansible
 
-Скриншоты: папка [`screenshots/`](screenshots/). Встроенные ниже картинки подгружаются с GitHub (`raw.githubusercontent.com`); после `git push` обновите страницу отчёта.
+Скриншоты в репозитории: [папка `docs/screenshots/`](screenshots/) (файлы `01-…` … `07-…`). В отчёте ниже — **относительные** ссылки (так GitHub показывает картинки и в приватном репо). Прямой просмотр: [01-verify-recap.png](screenshots/01-verify-recap.png).
 
 Автоматизированное развёртывание на GPU-ВМ (Ubuntu, NVIDIA): **Ollama** с моделью **qwen2.5:7b**, защищённый **API**, **Open WebUI**, мониторинг **Prometheus/Grafana**.
 
@@ -106,7 +106,7 @@ ansible-playbook playbooks/stage1.yml --tags verify --vault-password-file .vault
 
 **Ожидание:** в PLAY RECAP `failed=0`.
 
-![Verify recap — ansible verify failed=0](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/01-verify-recap.png)
+![Verify recap — ansible verify failed=0](screenshots/01-verify-recap.png)
 
 ### 2. NVIDIA и Docker (SSH на ВМ)
 
@@ -117,7 +117,7 @@ docker ps
 
 **Ожидание:** видна GPU; контейнеры `ollama`, мониторинг, `open-webui` в состоянии Up.
 
-![nvidia-smi на GPU-ВМ](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/02-nvidia-smi.png)
+![nvidia-smi на GPU-ВМ](screenshots/02-nvidia-smi.png)
 
 ### 3. API Ollama снаружи
 
@@ -139,7 +139,7 @@ curl -s "http://YOUR_VM_IP:8080/api/chat" \
   -d '{"model":"qwen2.5:7b","messages":[{"role":"user","content":"Привет"}],"stream":false}'
 ```
 
-![API tags qwen2.5:7b на порту 8080](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/03-api-tags.png)
+![API tags qwen2.5:7b на порту 8080](screenshots/03-api-tags.png)
 
 ### 4. Автозапуск
 
@@ -164,11 +164,11 @@ systemctl is-enabled ollama-compose
 
 Справочник: [monitoring.md](monitoring.md).
 
-![Grafana GPU DCGM](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/04-grafana-gpu.png)
+![Grafana GPU DCGM](screenshots/04-grafana-gpu.png)
 
-![Grafana Ollama LLM Inference](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/05-grafana-ollama.png)
+![Grafana Ollama LLM Inference](screenshots/05-grafana-ollama.png)
 
-![Grafana nginx](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/07-grafana-nginx.png)
+![Grafana nginx](screenshots/07-grafana-nginx.png)
 
 ### 6. Open WebUI (доп.)
 
@@ -178,7 +178,7 @@ systemctl is-enabled ollama-compose
 
 См. [open-webui.md](open-webui.md).
 
-![Open WebUI чат qwen2.5:7b](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/main/docs/screenshots/06-open-webui-chat.png)
+![Open WebUI чат qwen2.5:7b](screenshots/06-open-webui-chat.png)
 
 ### 7. Безопасность API (доп.)
 
