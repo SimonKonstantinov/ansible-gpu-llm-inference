@@ -3,14 +3,14 @@
 Ansible-плейбук разворачивает на **GPU-ВМ** (Ubuntu + NVIDIA) стек: **Ollama** с моделью **qwen2.5:7b**, защищённый **API**, **Open WebUI** и **мониторинг** (Prometheus + Grafana).
 
 **Полный отчёт и чеклист для проверяющего:** [docs/SUBMISSION.md](docs/SUBMISSION.md)  
-**Скриншоты к отчёту:** [docs/screenshots/](docs/screenshots/) (в отчёте [SUBMISSION.md](docs/SUBMISSION.md) — галерея после push на `main`).
+**Скриншоты:** [docs/screenshots/](docs/screenshots/) · [01 verify (raw)](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/refs/heads/main/docs/screenshots/01-verify-recap.png)
 
 <details>
-<summary>Превью скриншотов (локально из репозитория)</summary>
+<summary>Превью (raw GitHub)</summary>
 
 | Verify | API tags |
 |--------|----------|
-| ![01](docs/screenshots/01-verify-recap.png) | ![03](docs/screenshots/03-api-tags.png) |
+| ![01](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/refs/heads/main/docs/screenshots/01-verify-recap.png) | ![03](https://raw.githubusercontent.com/SimonKonstantinov/ansible-gpu-llm-inference/refs/heads/main/docs/screenshots/03-api-tags.png) |
 
 </details>
 
