@@ -7,6 +7,8 @@
 
 Имена файлов — **ровно** как в таблице (одно расширение `.png`). Если сохраняете как `02-nvidia-smi.png`, не добавляйте второй `.png` — получится `02-nvidia-smi.png.png`, и картинки в [SUBMISSION.md](../SUBMISSION.md) не найдутся.
 
+Файл должен быть **настоящим PNG**, а не JPEG с переименованным расширением (иначе GitHub/raw может отдавать 404). Проверка: `file docs/screenshots/05-grafana-ollama.png` → `PNG image data`.
+
 | Файл | Что снять |
 |------|-----------|
 | [01-verify-recap.png](01-verify-recap.png) | Терминал: `ansible-playbook ... --tags verify`, PLAY RECAP `failed=0` |
