@@ -45,6 +45,34 @@
   when: enable_reverse_proxy | bool
   tags: [base]
 
+- name: Allow Grafana public port when monitoring enabled
+  community.general.ufw:
+    rule: allow
+    port: "{{ grafana_public_port }}"
+    proto: tcp
+  when: enable_monitoring | bool
+  tags: [base]
+
+- name: Allow Open WebUI public port when enabled
+  community.general.ufw:
+    rule: allow
+    port: "{{ open_webui_public_port }}"
+    proto: tcp
+  when: enable_open_webui | bool
+  tags: [base]
+
+- name: Allow Docker networks to reach nginx stub_status
+  community.general.ufw:
+    rule: allow
+    port: "{{ nginx_stub_status_port }}"
+    proto: tcp
+    from_ip: 172.16.0.0/12
+  when:
+    - enable_monitoring | bool
+    - monitoring_enable_nginx_exporter | default(true) | bool
+    - enable_reverse_proxy | bool
+  tags: [base]
+
 - name: Enable UFW
   community.general.ufw:
     state: enabled

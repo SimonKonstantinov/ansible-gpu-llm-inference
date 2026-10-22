@@ -12,11 +12,16 @@
     - role: ollama
       when: llm_runtime == 'ollama'
       tags: [ollama]
+    - role: open_webui
+      when:
+        - llm_runtime == 'ollama'
+        - enable_open_webui | bool
+      tags: [webui]
     - role: vllm
       when: llm_runtime == 'vllm'
       tags: [vllm]
     - role: reverse_proxy
-      when: enable_reverse_proxy | bool
+      when: enable_reverse_proxy | bool or enable_monitoring | bool or enable_open_webui | bool
       tags: [proxy]
     - role: monitoring
       when: enable_monitoring | bool
@@ -68,6 +73,217 @@
       when: llm_runtime == 'ollama'
       tags: [verify]
 
+    - name: Health check summary (vLLM)
+      ansible.builtin.debug:
+        msg: >-
+          Stack ready. Runtime=vllm.
+          API: http://127.0.0.1:{{ vllm_port }}/v1/models
+          External: http://YOUR_VM:{{ reverse_proxy_listen_port }}/v1/models (Bearer)
+      when: llm_runtime == 'vllm'
+      tags: [verify]
+
+    - name: Verify Prometheus ready
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ prometheus_port }}/-/ready"
+        status_code: 200
+      when: enable_monitoring | bool
+      tags: [verify, monitoring]
+
+    - name: Verify Grafana health
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ grafana_port }}/api/health"
+        status_code: 200
+      when: enable_monitoring | bool
+      tags: [verify, monitoring]
+
+    - name: Fetch Prometheus scrape targets
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ prometheus_port }}/api/v1/targets"
+        return_content: true
+      register: prom_targets
+      when: enable_monitoring | bool
+      tags: [verify, monitoring]
+
+    - name: Assert DCGM exporter target is up
+      ansible.builtin.assert:
+        that:
+          - prom_dcgm_up | int > 0
+        fail_msg: >-
+          Prometheus job dcgm is not UP. Targets:
+          {{ prom_targets.json.data.activeTargets | map(attribute='labels') | list }}
+      vars:
+        prom_dcgm_up: >-
+          {{
+            prom_targets.json.data.activeTargets
+            | selectattr('labels.job', 'equalto', 'dcgm')
+            | selectattr('health', 'equalto', 'up')
+            | list
+            | length
+          }}
+      when: enable_monitoring | bool
+      tags: [verify, monitoring]
+
+    - name: Assert cAdvisor target is up
+      ansible.builtin.assert:
+        that:
+          - prom_cadvisor_up | int > 0
+        fail_msg: Prometheus job cadvisor is not UP
+      vars:
+        prom_cadvisor_up: >-
+          {{
+            prom_targets.json.data.activeTargets
+            | selectattr('labels.job', 'equalto', 'cadvisor')
+            | selectattr('health', 'equalto', 'up')
+            | list
+            | length
+          }}
+      when:
+        - enable_monitoring | bool
+        - monitoring_enable_cadvisor | default(true) | bool
+      tags: [verify, monitoring]
+
+    - name: Assert nginx exporter target is up
+      ansible.builtin.assert:
+        that:
+          - prom_nginx_up | int > 0
+        fail_msg: Prometheus job nginx is not UP
+      vars:
+        prom_nginx_up: >-
+          {{
+            prom_targets.json.data.activeTargets
+            | selectattr('labels.job', 'equalto', 'nginx')
+            | selectattr('health', 'equalto', 'up')
+            | list
+            | length
+          }}
+      when:
+        - enable_monitoring | bool
+        - monitoring_enable_nginx_exporter | default(true) | bool
+        - enable_reverse_proxy | bool
+      tags: [verify, monitoring]
+
+    - name: Query nginx_up from Prometheus
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ prometheus_port }}/api/v1/query?query=nginx_up"
+        method: GET
+        return_content: true
+      register: prom_nginx_up_query
+      when:
+        - enable_monitoring | bool
+        - monitoring_enable_nginx_exporter | default(true) | bool
+        - enable_reverse_proxy | bool
+      tags: [verify, monitoring]
+
+    - name: Assert nginx exporter reports healthy scrape
+      ansible.builtin.assert:
+        that:
+          - prom_nginx_up_query.json.data.result | length > 0
+          - prom_nginx_up_query.json.data.result[0].value[1] | float == 1
+        fail_msg: nginx_up is not 1 — проверьте stub_status :8090 и nginx-exporter
+      when:
+        - enable_monitoring | bool
+        - monitoring_enable_nginx_exporter | default(true) | bool
+        - enable_reverse_proxy | bool
+      tags: [verify, monitoring]
+
+    - name: Assert vLLM Prometheus target is up
+      ansible.builtin.assert:
+        that:
+          - prom_vllm_up | int > 0
+        fail_msg: Prometheus job vllm is not UP
+      vars:
+        prom_vllm_up: >-
+          {{
+            prom_targets.json.data.activeTargets
+            | selectattr('labels.job', 'equalto', 'vllm')
+            | selectattr('health', 'equalto', 'up')
+            | list
+            | length
+          }}
+      when:
+        - enable_monitoring | bool
+        - llm_runtime == 'vllm'
+        - monitoring_enable_vllm_metrics | default(true) | bool
+      tags: [verify, monitoring]
+
+    - name: Query vLLM metrics from Prometheus
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ prometheus_port }}/api/v1/query?query=count(%7B__name__%3D~%22vllm.*%22%7D)"
+        method: GET
+        return_content: true
+      register: prom_vllm_metrics_query
+      when:
+        - enable_monitoring | bool
+        - llm_runtime == 'vllm'
+        - monitoring_enable_vllm_metrics | default(true) | bool
+      tags: [verify, monitoring]
+
+    - name: Assert vLLM metrics are present in Prometheus
+      ansible.builtin.assert:
+        that:
+          - prom_vllm_metrics_query.json.data.result | length > 0
+          - prom_vllm_metrics_query.json.data.result[0].value[1] | float > 0
+        fail_msg: Нет метрик vllm:* в Prometheus — vLLM запущен и отдаёт /metrics?
+      when:
+        - enable_monitoring | bool
+        - llm_runtime == 'vllm'
+        - monitoring_enable_vllm_metrics | default(true) | bool
+      tags: [verify, monitoring]
+
+    - name: Assert Ollama exporter target is up
+      ansible.builtin.assert:
+        that:
+          - prom_ollama_up | int > 0
+        fail_msg: Prometheus job ollama is not UP
+      vars:
+        prom_ollama_up: >-
+          {{
+            prom_targets.json.data.activeTargets
+            | selectattr('labels.job', 'equalto', 'ollama')
+            | selectattr('health', 'equalto', 'up')
+            | list
+            | length
+          }}
+      when:
+        - enable_monitoring | bool
+        - llm_runtime == 'ollama'
+        - monitoring_enable_ollama_exporter | default(true) | bool
+      tags: [verify, monitoring]
+
+    - name: Query ollama_up from Prometheus
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ prometheus_port }}/api/v1/query?query=ollama_up"
+        method: GET
+        return_content: true
+      register: prom_ollama_up_query
+      when:
+        - enable_monitoring | bool
+        - llm_runtime == 'ollama'
+        - monitoring_enable_ollama_exporter | default(true) | bool
+      tags: [verify, monitoring]
+
+    - name: Assert Ollama exporter reports healthy scrape
+      ansible.builtin.assert:
+        that:
+          - prom_ollama_up_query.json.data.result | length > 0
+          - prom_ollama_up_query.json.data.result[0].value[1] | float == 1
+        fail_msg: ollama_up is not 1 — проверьте ollama-exporter и OLLAMA_URL
+      when:
+        - enable_monitoring | bool
+        - llm_runtime == 'ollama'
+        - monitoring_enable_ollama_exporter | default(true) | bool
+      tags: [verify, monitoring]
+
+    - name: Verify Open WebUI responds
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ open_webui_port }}/"
+        status_code: [200, 301, 302, 307, 308]
+        follow_redirects: none
+      when:
+        - llm_runtime == 'ollama'
+        - enable_open_webui | bool
+      tags: [verify, webui]
+
     - name: Example curl commands for submission
       ansible.builtin.debug:
         msg:
@@ -83,4 +299,16 @@
       when:
         - llm_runtime == 'ollama'
         - ollama_models | length > 0
+      tags: [verify]
+
+    - name: Example curl commands for vLLM submission
+      ansible.builtin.debug:
+        msg:
+          - "curl -s http://127.0.0.1:{{ vllm_port }}/v1/models"
+          - >-
+            curl -s http://127.0.0.1:{{ reverse_proxy_listen_port }}/v1/chat/completions
+            -H 'Authorization: Bearer YOUR_TOKEN'
+            -H 'Content-Type: application/json'
+            -d '{"model":"{{ vllm_model }}","messages":[{"role":"user","content":"Привет"}]}'
+      when: llm_runtime == 'vllm'
       tags: [verify]

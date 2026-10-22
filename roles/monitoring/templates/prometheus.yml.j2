@@ -1,0 +1,44 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: node
+    static_configs:
+      - targets:
+          - node_exporter:9100
+
+  - job_name: dcgm
+    static_configs:
+      - targets:
+          - dcgm-exporter:9400
+
+{% if monitoring_enable_cadvisor | bool %}
+  - job_name: cadvisor
+    static_configs:
+      - targets:
+          - cadvisor:8080
+{% endif %}
+
+{% if monitoring_enable_nginx_exporter | bool and enable_reverse_proxy | bool %}
+  - job_name: nginx
+    static_configs:
+      - targets:
+          - {{ nginx_exporter_scrape_target }}
+{% endif %}
+
+{% if llm_runtime == 'vllm' and monitoring_enable_vllm_metrics | default(true) | bool %}
+  - job_name: vllm
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - {{ vllm_metrics_scrape_target }}
+{% endif %}
+
+{% if llm_runtime == 'ollama' and monitoring_enable_ollama_exporter | default(true) | bool %}
+  - job_name: ollama
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - {{ ollama_exporter_scrape_target }}
+{% endif %}

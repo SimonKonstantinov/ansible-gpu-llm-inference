@@ -1,4 +1,9 @@
 ---
+- name: Apply pending nginx reload before monitoring checks
+  ansible.builtin.meta: flush_handlers
+  when: enable_monitoring | bool
+  tags: [monitoring]
+
 - name: Create monitoring directory
   ansible.builtin.file:
     path: "{{ monitoring_compose_dir }}"
@@ -6,23 +11,210 @@
     mode: "0755"
   tags: [monitoring]
 
-- name: Deploy node_exporter compose
+- name: Create Grafana provisioning directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ monitoring_compose_dir }}/grafana/provisioning/datasources"
+    - "{{ monitoring_compose_dir }}/grafana/provisioning/dashboards/json/gpu"
+    - "{{ monitoring_compose_dir }}/grafana/provisioning/dashboards/json/infrastructure"
+    - "{{ monitoring_compose_dir }}/grafana/provisioning/dashboards/json/llm"
+  tags: [monitoring]
+
+- name: Create Prometheus data directory (writable by container user nobody)
+  ansible.builtin.file:
+    path: "{{ monitoring_compose_dir }}/data/prometheus"
+    state: directory
+    owner: "{{ prometheus_data_uid }}"
+    group: "{{ prometheus_data_gid }}"
+    mode: "0755"
+  tags: [monitoring]
+
+- name: Remove legacy Prometheus named volume (wrong permissions)
+  ansible.builtin.command:
+    cmd: docker volume rm monitoring_prometheus_data
+    chdir: "{{ monitoring_compose_dir }}"
+  register: prom_vol_rm
+  failed_when: false
+  changed_when: prom_vol_rm.rc == 0
+  tags: [monitoring]
+
+- name: Deploy Prometheus config
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ monitoring_compose_dir }}/prometheus.yml"
+    mode: "0644"
+  register: prometheus_config_deploy
+  tags: [monitoring]
+
+- name: Deploy Grafana datasource
+  ansible.builtin.template:
+    src: grafana/provisioning/datasources/datasource.yml.j2
+    dest: "{{ monitoring_compose_dir }}/grafana/provisioning/datasources/datasource.yml"
+    mode: "0644"
+  tags: [monitoring]
+
+- name: Deploy Grafana dashboard provider
+  ansible.builtin.template:
+    src: grafana/provisioning/dashboards/dashboard.yml.j2
+    dest: "{{ monitoring_compose_dir }}/grafana/provisioning/dashboards/dashboard.yml"
+    mode: "0644"
+  register: grafana_dashboard_provider_deploy
+  tags: [monitoring]
+
+- name: Deploy GPU DCGM dashboard JSON
+  ansible.builtin.template:
+    src: grafana/provisioning/dashboards/json/gpu/gpu-dcgm.json.j2
+    dest: "{{ monitoring_compose_dir }}/grafana/provisioning/dashboards/json/gpu/gpu-dcgm.json"
+    mode: "0644"
+  register: gpu_dashboard_deploy
+  tags: [monitoring]
+
+- name: Deploy vLLM Grafana dashboard JSON
+  ansible.builtin.copy:
+    src: grafana-vllm-dashboard.json
+    dest: "{{ monitoring_compose_dir }}/grafana/provisioning/dashboards/json/llm/vllm-inference.json"
+    mode: "0644"
+  when: llm_runtime == 'vllm'
+  register: llm_vllm_dashboard_deploy
+  tags: [monitoring]
+
+- name: Remove vLLM dashboard when using Ollama
+  ansible.builtin.file:
+    path: "{{ monitoring_compose_dir }}/grafana/provisioning/dashboards/json/llm/vllm-inference.json"
+    state: absent
+  when: llm_runtime == 'ollama'
+  tags: [monitoring]
+
+- name: Deploy Ollama Grafana dashboard JSON
+  ansible.builtin.template:
+    src: grafana/provisioning/dashboards/json/llm/ollama-llm.json.j2
+    dest: "{{ monitoring_compose_dir }}/grafana/provisioning/dashboards/json/llm/ollama-inference.json"
+    mode: "0644"
+  when: llm_runtime == 'ollama'
+  register: llm_ollama_dashboard_deploy
+  tags: [monitoring]
+
+- name: Remove Ollama dashboard when using vLLM
+  ansible.builtin.file:
+    path: "{{ monitoring_compose_dir }}/grafana/provisioning/dashboards/json/llm/ollama-inference.json"
+    state: absent
+  when: llm_runtime == 'vllm'
+  tags: [monitoring]
+
+- name: Deploy infrastructure Grafana dashboards
+  ansible.builtin.template:
+    src: "grafana/provisioning/dashboards/json/infrastructure/{{ item }}.json.j2"
+    dest: "{{ monitoring_compose_dir }}/grafana/provisioning/dashboards/json/infrastructure/{{ item }}.json"
+    mode: "0644"
+  register: infrastructure_dashboards_deploy
+  loop:
+    - node-host
+    - docker-cadvisor
+    - nginx
+  tags: [monitoring]
+
+- name: Restart Grafana after dashboard or provider changes
+  ansible.builtin.command:
+    cmd: docker compose restart grafana
+    chdir: "{{ monitoring_compose_dir }}"
+  when: >-
+    grafana_dashboard_provider_deploy is changed or
+    infrastructure_dashboards_deploy is changed or
+    gpu_dashboard_deploy is changed or
+    (llm_vllm_dashboard_deploy is defined and llm_vllm_dashboard_deploy is changed) or
+    (llm_ollama_dashboard_deploy is defined and llm_ollama_dashboard_deploy is changed)
+  tags: [monitoring]
+
+- name: Wait for Grafana health after restart
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port }}/api/health"
+    status_code: 200
+  register: grafana_health_after_restart
+  until: grafana_health_after_restart.status == 200
+  retries: 12
+  delay: 5
+  when: >-
+    grafana_dashboard_provider_deploy is changed or
+    infrastructure_dashboards_deploy is changed or
+    gpu_dashboard_deploy is changed or
+    (llm_vllm_dashboard_deploy is defined and llm_vllm_dashboard_deploy is changed) or
+    (llm_ollama_dashboard_deploy is defined and llm_ollama_dashboard_deploy is changed)
+  tags: [monitoring]
+
+- name: Deploy monitoring compose
   ansible.builtin.template:
     src: docker-compose.yml.j2
     dest: "{{ monitoring_compose_dir }}/docker-compose.yml"
     mode: "0644"
+  register: monitoring_compose_deploy
   tags: [monitoring]
 
 - name: Start monitoring stack
   ansible.builtin.command:
-    cmd: docker compose up -d
+    cmd: docker compose up -d --remove-orphans
     chdir: "{{ monitoring_compose_dir }}"
-  changed_when: true
+  register: monitoring_compose_up
+  changed_when: >-
+    monitoring_compose_up.rc == 0 and (
+    'Creating' in monitoring_compose_up.stdout or
+    'Starting' in monitoring_compose_up.stdout or
+    'Recreating' in monitoring_compose_up.stdout or
+    'Pulling' in monitoring_compose_up.stdout)
   tags: [monitoring]
 
-- name: Note on GPU metrics
-  ansible.builtin.debug:
-    msg: >-
-      Для GPU добавьте nvidia-dcgm-exporter или скрейп nvidia-smi через textfile collector.
-      node_exporter слушает 127.0.0.1:{{ node_exporter_port }}.
+- name: Recreate cAdvisor when compose changes
+  ansible.builtin.command:
+    cmd: docker compose up -d --force-recreate cadvisor
+    chdir: "{{ monitoring_compose_dir }}"
+  when: monitoring_compose_deploy is changed
+  tags: [monitoring]
+
+- name: Recreate Prometheus container when scrape config changes
+  ansible.builtin.command:
+    cmd: docker compose up -d --force-recreate prometheus
+    chdir: "{{ monitoring_compose_dir }}"
+  when: prometheus_config_deploy is changed
+  tags: [monitoring]
+
+- name: Reload Prometheus configuration
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ prometheus_port }}/-/reload"
+    method: POST
+    status_code: 200
+  register: prom_reload
+  retries: 5
+  delay: 3
+  until: prom_reload is succeeded
+  tags: [monitoring]
+
+- name: Wait for Prometheus ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ prometheus_port }}/-/ready"
+    status_code: 200
+  register: prom_ready
+  until: prom_ready is succeeded
+  retries: 24
+  delay: 5
+  tags: [monitoring]
+
+- name: Wait for Grafana health
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port }}/api/health"
+    status_code: 200
+  register: grafana_health
+  until: grafana_health is succeeded
+  retries: 24
+  delay: 5
+  tags: [monitoring]
+
+- name: Verify nginx stub_status locally
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ nginx_stub_status_port }}/stub_status"
+    status_code: 200
+  when:
+    - monitoring_enable_nginx_exporter | bool
+    - enable_reverse_proxy | bool
   tags: [monitoring]

@@ -1,5 +1,7 @@
 # Этап 1: Ansible на GPU-ВМ (self-hosted LLM API)
 
+> **Актуальный отчёт и проверка ТЗ:** [SUBMISSION.md](SUBMISSION.md). Ниже — вспомогательные заметки по подготовке ВМ на immers.
+
 Сценарий сдачи тестового задания: **драйверы NVIDIA, Docker, Ollama (или vLLM), автозапуск, healthcheck, свой API** на арендованной GPU-ВМ [immers.cloud](https://immers.cloud).
 
 Control node — **ваш ПК** (`ansible-playbook` по SSH). Отдельный сервер под Ansible не нужен.

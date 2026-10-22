@@ -1,0 +1,50 @@
+{
+  "title": "Docker Containers",
+  "uid": "docker-cadvisor",
+  "schemaVersion": 39,
+  "version": 5,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Container CPU (Docker cgroups)",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{cpu=\"total\",id=~\"/system.slice/docker-.+scope\"}[5m])) by (id)",
+          "legendFormat": "{% raw %}{{id}}{% endraw %}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_service!=\"\"}[5m])) by (container_label_com_docker_compose_service)",
+          "legendFormat": "{% raw %}{{container_label_com_docker_compose_service}}{% endraw %}",
+          "refId": "B"
+        }
+      ],
+      "description": "Основной ряд — cgroup systemd для контейнеров Docker. Второй ряд — имена compose-сервисов, если cAdvisor v0.53+ и Docker отдают лейблы."
+    },
+    {
+      "id": 2,
+      "title": "Container memory (Docker cgroups)",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 10 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(container_memory_working_set_bytes{id=~\"/system.slice/docker-.+scope\"}) by (id)",
+          "legendFormat": "{% raw %}{{id}}{% endraw %}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(container_memory_working_set_bytes{container_label_com_docker_compose_service!=\"\"}) by (container_label_com_docker_compose_service)",
+          "legendFormat": "{% raw %}{{container_label_com_docker_compose_service}}{% endraw %}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    }
+  ]
+}

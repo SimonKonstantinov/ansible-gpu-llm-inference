@@ -1,0 +1,9 @@
+---
+open_webui_compose_dir: /opt/open-webui
+open_webui_port: 8088
+open_webui_public_port: 8082
+open_webui_image: ghcr.io/open-webui/open-webui:0.6.5
+open_webui_nginx_user: chat
+open_webui_nginx_password: "{{ vault_open_webui_nginx_password }}"
+# nginx basic auth ломает SPA (бесконечный запрос пароля); защита — вход в Open WebUI + UFW
+open_webui_nginx_basic_auth: false

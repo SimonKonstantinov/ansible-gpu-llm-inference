@@ -1,0 +1,114 @@
+{
+  "title": "Ollama LLM Inference",
+  "uid": "llm-ollama",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "description": "Метрики maravexa/ollama-exporter (job ollama). Сделайте один запрос к модели (API :8080 или curl /api/generate), чтобы модель загрузилась в VRAM — тогда появятся ollama_model_*.",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Ollama API (exporter)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "ollama_up{job=\"ollama\"}",
+          "legendFormat": "up",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN" } } },
+            { "type": "value", "options": { "1": { "text": "UP" } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Models loaded in VRAM",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(ollama_model_loaded{job=\"ollama\"})",
+          "legendFormat": "loaded",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Model loaded (by model)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "ollama_model_loaded{job=\"ollama\"}",
+          "legendFormat": "{% raw %}{{model}}{% endraw %}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "min": 0, "max": 1 } }
+    },
+    {
+      "id": 4,
+      "title": "Model VRAM bytes",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "ollama_model_vram_bytes{job=\"ollama\"}",
+          "legendFormat": "{% raw %}{{model}}{% endraw %}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "id": 5,
+      "title": "GPU utilization (DCGM)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "DCGM_FI_DEV_GPU_UTIL",
+          "legendFormat": "GPU {% raw %}{{gpu}}{% endraw %}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent" } }
+    },
+    {
+      "id": 6,
+      "title": "Request rate (if traffic via exporter proxy)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(ollama_requests_total{job=\"ollama\"}[5m])) by (model, endpoint)",
+          "legendFormat": "{% raw %}{{model}} {{endpoint}}{% endraw %}",
+          "refId": "A"
+        }
+      ],
+      "description": "Появится, если клиенты ходят в Ollama через proxy exporter :9401 (опционально)."
+    }
+  ]
+}

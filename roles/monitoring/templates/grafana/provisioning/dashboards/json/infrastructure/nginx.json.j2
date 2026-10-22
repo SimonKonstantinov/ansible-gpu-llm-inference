@@ -1,0 +1,88 @@
+{
+  "title": "nginx",
+  "uid": "nginx-metrics",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "description": "Метрики host nginx (stub_status). При нулевом трафике gauge могут быть 0 — откройте :8080/:8081 или обновите страницу (Ctrl+F5).",
+  "panels": [
+    {
+      "id": 10,
+      "title": "Exporter scrape OK",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "nginx_up",
+          "legendFormat": "nginx_up",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN" } } },
+            { "type": "value", "options": { "1": { "text": "UP" } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 1,
+      "title": "Active connections",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "nginx_connections_active",
+          "legendFormat": "active",
+          "refId": "A"
+        },
+        {
+          "expr": "nginx_connections_reading",
+          "legendFormat": "reading",
+          "refId": "B"
+        },
+        {
+          "expr": "nginx_connections_writing",
+          "legendFormat": "writing",
+          "refId": "C"
+        },
+        {
+          "expr": "nginx_connections_waiting",
+          "legendFormat": "waiting",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP requests rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(nginx_http_requests_total[5m])",
+          "legendFormat": "req/s",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(nginx_connections_accepted[5m])",
+          "legendFormat": "conn accepted/s",
+          "refId": "B"
+        }
+      ]
+    }
+  ]
+}

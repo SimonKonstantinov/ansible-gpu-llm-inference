@@ -1,3 +1,38 @@
 ---
 monitoring_compose_dir: /opt/monitoring
 node_exporter_port: 9100
+prometheus_port: 9090
+grafana_port: 3000
+grafana_public_port: 8081
+grafana_admin_user: admin
+grafana_admin_password: "{{ vault_grafana_admin_password }}"
+grafana_nginx_user: monitor
+grafana_nginx_password: "{{ vault_grafana_nginx_password }}"
+dcgm_exporter_port: 9400
+# Docker Hub (без NVCR login). NVCR даёт 403 без учётки NGC.
+dcgm_exporter_image: nvidia/dcgm-exporter:3.3.8-3.6.0-ubuntu22.04
+prometheus_image: prom/prometheus:v2.55.1
+grafana_image: grafana/grafana:11.4.0
+# UID пользователя nobody в официальном образе Prometheus
+prometheus_data_uid: "65534"
+prometheus_data_gid: "65534"
+
+cadvisor_port: 8089
+# Default: v0.49.x — на Docker 29 docker-factory не регистрируется, но systemd отдаёт cgroup docker-*.scope.
+# Для compose-лейблов на совместимых хостах: cadvisor_image: ghcr.io/google/cadvisor:v0.53.0
+cadvisor_image: gcr.io/cadvisor/cadvisor:v0.49.1
+nginx_exporter_port: 9113
+nginx_exporter_image: nginx/nginx-prometheus-exporter:1.3.0
+nginx_stub_status_port: 8090
+nginx_stub_status_uri: "http://172.17.0.1:8090/stub_status"
+nginx_exporter_scrape_target: "nginx-exporter:9113"
+monitoring_enable_cadvisor: true
+monitoring_enable_nginx_exporter: true
+monitoring_enable_vllm_metrics: true
+vllm_metrics_scrape_target: "172.17.0.1:8000"
+
+monitoring_enable_ollama_exporter: true
+ollama_exporter_image: ghcr.io/maravexa/ollama-exporter:latest
+ollama_exporter_port: 9420
+ollama_exporter_scrape_target: ollama-exporter:9400
+ollama_exporter_url: "http://172.17.0.1:{{ ollama_listen_port | default(11434) }}"

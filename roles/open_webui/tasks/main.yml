@@ -1,0 +1,38 @@
+---
+- name: Create Open WebUI compose directory
+  ansible.builtin.file:
+    path: "{{ open_webui_compose_dir }}"
+    state: directory
+    mode: "0755"
+  tags: [webui]
+
+- name: Deploy Open WebUI compose
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ open_webui_compose_dir }}/docker-compose.yml"
+    mode: "0644"
+  tags: [webui]
+
+- name: Start Open WebUI stack
+  ansible.builtin.command:
+    cmd: docker compose up -d
+    chdir: "{{ open_webui_compose_dir }}"
+  register: open_webui_compose_up
+  changed_when: >-
+    open_webui_compose_up.rc == 0 and (
+    'Creating' in open_webui_compose_up.stdout or
+    'Starting' in open_webui_compose_up.stdout or
+    'Recreating' in open_webui_compose_up.stdout or
+    'Pulling' in open_webui_compose_up.stdout)
+  tags: [webui]
+
+- name: Wait for Open WebUI HTTP
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ open_webui_port }}/"
+    status_code: [200, 301, 302, 307, 308]
+    follow_redirects: none
+  register: open_webui_http
+  until: open_webui_http is succeeded
+  retries: 36
+  delay: 5
+  tags: [webui]

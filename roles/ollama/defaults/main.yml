@@ -1,6 +1,8 @@
 ---
 ollama_image: ollama/ollama:latest
 ollama_listen_host: "127.0.0.1"
+# Публикация порта Docker: 0.0.0.0 нужен Open WebUI в другом контейнере; с интернета 11434 закрыт UFW
+ollama_docker_bind: "0.0.0.0"
 ollama_listen_port: 11434
 ollama_models:
   - qwen2.5:7b

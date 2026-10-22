@@ -6,19 +6,157 @@
     update_cache: true
   tags: [proxy]
 
-- name: Deploy nginx site for Ollama API
+- name: Deploy nginx WebSocket connection map for Open WebUI
   ansible.builtin.template:
-    src: ollama-api.conf.j2
-    dest: /etc/nginx/sites-available/ollama-api.conf
+    src: conf.d/connection-upgrade-map.conf.j2
+    dest: /etc/nginx/conf.d/connection-upgrade-map.conf
     mode: "0644"
+  when: enable_open_webui | bool
   notify: Reload nginx
   tags: [proxy]
 
-- name: Enable Ollama nginx site
+- name: Install htpasswd helper for nginx basic auth
+  ansible.builtin.apt:
+    name: apache2-utils
+    state: present
+  when: enable_monitoring | bool or enable_open_webui | bool
+  tags: [proxy]
+
+- name: Deploy nginx site for LLM API (Ollama or vLLM)
+  ansible.builtin.template:
+    src: llm-api.conf.j2
+    dest: /etc/nginx/sites-available/llm-api.conf
+    mode: "0644"
+  when: enable_reverse_proxy | bool
+  notify: Reload nginx
+  tags: [proxy]
+
+- name: Enable LLM API nginx site
   ansible.builtin.file:
-    src: /etc/nginx/sites-available/ollama-api.conf
-    dest: /etc/nginx/sites-enabled/ollama-api.conf
+    src: /etc/nginx/sites-available/llm-api.conf
+    dest: /etc/nginx/sites-enabled/llm-api.conf
     state: link
+  when: enable_reverse_proxy | bool
+  notify: Reload nginx
+  tags: [proxy]
+
+- name: Remove legacy Ollama nginx site symlink
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/ollama-api.conf
+    state: absent
+  when: enable_reverse_proxy | bool
+  notify: Reload nginx
+  tags: [proxy]
+
+- name: Create Grafana nginx basic auth file
+  ansible.builtin.command:
+    argv:
+      - htpasswd
+      - -cbB
+      - /etc/nginx/.htpasswd-grafana
+      - "{{ grafana_nginx_user }}"
+      - "{{ grafana_nginx_password }}"
+  no_log: true
+  register: grafana_htpasswd
+  changed_when: grafana_htpasswd.rc == 0
+  when: enable_monitoring | bool
+  notify: Reload nginx
+  tags: [proxy]
+
+- name: Set Grafana htpasswd file permissions
+  ansible.builtin.file:
+    path: /etc/nginx/.htpasswd-grafana
+    owner: root
+    group: www-data
+    mode: "0640"
+  when: enable_monitoring | bool
+  tags: [proxy]
+
+- name: Deploy nginx site for Grafana
+  ansible.builtin.template:
+    src: grafana-api.conf.j2
+    dest: /etc/nginx/sites-available/grafana-api.conf
+    mode: "0644"
+  when: enable_monitoring | bool
+  notify: Reload nginx
+  tags: [proxy]
+
+- name: Enable Grafana nginx site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/grafana-api.conf
+    dest: /etc/nginx/sites-enabled/grafana-api.conf
+    state: link
+  when: enable_monitoring | bool
+  notify: Reload nginx
+  tags: [proxy]
+
+- name: Deploy nginx stub_status for Prometheus exporter
+  ansible.builtin.template:
+    src: nginx-stub-status.conf.j2
+    dest: /etc/nginx/sites-available/nginx-stub-status.conf
+    mode: "0644"
+  when:
+    - enable_monitoring | bool
+    - enable_reverse_proxy | bool
+    - monitoring_enable_nginx_exporter | default(true) | bool
+  notify: Restart nginx
+  tags: [proxy]
+
+- name: Enable nginx stub_status site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/nginx-stub-status.conf
+    dest: /etc/nginx/sites-enabled/nginx-stub-status.conf
+    state: link
+  when:
+    - enable_monitoring | bool
+    - enable_reverse_proxy | bool
+    - monitoring_enable_nginx_exporter | default(true) | bool
+  notify: Restart nginx
+  tags: [proxy]
+
+- name: Create Open WebUI nginx basic auth file
+  ansible.builtin.command:
+    argv:
+      - htpasswd
+      - -cbB
+      - /etc/nginx/.htpasswd-open-webui
+      - "{{ open_webui_nginx_user }}"
+      - "{{ open_webui_nginx_password }}"
+  no_log: true
+  register: open_webui_htpasswd
+  changed_when: open_webui_htpasswd.rc == 0
+  when:
+    - enable_open_webui | bool
+    - open_webui_nginx_basic_auth | bool
+  notify: Reload nginx
+  tags: [proxy]
+
+- name: Set Open WebUI htpasswd file permissions
+  ansible.builtin.file:
+    path: /etc/nginx/.htpasswd-open-webui
+    owner: root
+    group: www-data
+    mode: "0640"
+  when:
+    - enable_open_webui | bool
+    - open_webui_nginx_basic_auth | bool
+  tags: [proxy]
+
+- name: Deploy nginx site for Open WebUI
+  ansible.builtin.template:
+    src: open-webui.conf.j2
+    dest: /etc/nginx/sites-available/open-webui.conf
+    mode: "0644"
+  when: enable_open_webui | bool
+  notify: Reload nginx
+  tags: [proxy]
+
+- name: Enable Open WebUI nginx site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/open-webui.conf
+    dest: /etc/nginx/sites-enabled/open-webui.conf
+    state: link
+  when: enable_open_webui | bool
   notify: Reload nginx
   tags: [proxy]
 

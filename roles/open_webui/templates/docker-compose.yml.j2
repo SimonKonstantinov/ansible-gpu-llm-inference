@@ -1,0 +1,16 @@
+services:
+  open-webui:
+    image: {{ open_webui_image }}
+    container_name: open_webui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ open_webui_port }}:8080"
+    environment:
+      OLLAMA_BASE_URL: "http://host.docker.internal:{{ ollama_listen_port }}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - open_webui_data:/app/backend/data
+
+volumes:
+  open_webui_data:
